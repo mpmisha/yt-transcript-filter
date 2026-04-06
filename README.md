@@ -62,7 +62,7 @@ A browser-based interface for fetching transcripts with real-time progress. Ente
 |-------|------|------|
 | **Service** | Python generator wrapping `fetcher` + `storage` + `whisper_transcriber` | `src/service.py` |
 | **API** | FastAPI with SSE streaming | `web/api.py` |
-| **Frontend** | React 19 + TypeScript + Tailwind CSS (Vite) | `web/frontend/` |
+| **Frontend** | React 19 + TypeScript (Vite) | `web/frontend/` |
 
 Communication between frontend and backend uses **Server-Sent Events (SSE)** for real-time progress streaming.
 
@@ -161,15 +161,15 @@ yt-transcript-filter/
 │   ├── storage.py             # Save/load transcripts
 │   ├── service.py             # Generator service layer (web)
 │   ├── whisper_transcriber.py # Audio download + Whisper transcription
-│   └── Plans/                 # Development plans per feature
-│       ├── FetchPanel/        # ✅ V1 fetch panel (completed)
-│       ├── Whisper/           # ✅ Whisper fallback (completed)
-│       ├── Progress/          # ✅ Per-video progress panel (completed)
-│       └── VideoLimit/        # ✅ Video limit input (completed)
+│   └── Plans/                 # Feature development plans
+│       ├── FetchPanel/
+│       ├── Whisper/
+│       ├── Progress/
+│       └── VideoLimit/
 ├── web/
 │   ├── api.py                 # FastAPI SSE endpoints
 │   ├── requirements.txt       # Backend web dependencies
-│   └── frontend/              # React 19 + TypeScript + Tailwind app
+│   └── frontend/              # React 19 + TypeScript app
 │       └── src/
 │           ├── App.tsx
 │           ├── types.ts
@@ -182,6 +182,8 @@ yt-transcript-filter/
 │               ├── ProgressBar.tsx
 │               ├── SummaryCard.tsx
 │               └── ErrorMessage.tsx
+├── docs/
+│   └── DEVELOPMENT_LOG.md     # Chronological feature development log
 ├── package.json               # Root scripts (dev, build)
 ├── requirements.txt           # Core Python dependencies
 └── pyproject.toml
