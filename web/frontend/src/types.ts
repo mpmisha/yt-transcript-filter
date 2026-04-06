@@ -70,6 +70,7 @@ export interface SSEVideoStatusEvent {
   event: "video_status";
   video_id: string;
   step: VideoStep;
+  error?: string;
 }
 
 export interface VideoProgressItem {
@@ -79,6 +80,7 @@ export interface VideoProgressItem {
   upload_date: string | null;
   url: string;
   step: VideoStep;
+  error?: string;
 }
 
 export type SSEEvent =

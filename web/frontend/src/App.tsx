@@ -16,7 +16,7 @@ function App() {
       <h1>YouTube Transcript Fetcher</h1>
       <FetchForm onSubmit={startFetch} disabled={status === "loading"} />
       <ErrorMessage message={error} />
-      {status === "loading" && (
+      {(status === "loading" || status === "done") && (
         <>
           <ProgressBar current={progress.current} total={progress.total} />
           {videoProgress.length > 0 && (
@@ -25,7 +25,11 @@ function App() {
         </>
       )}
       {status === "done" && (
-        <SummaryCard total={progress.total} withTranscript={withTranscript} withWhisper={withWhisper} />
+        <SummaryCard
+          total={progress.total}
+          withTranscript={withTranscript}
+          withWhisper={withWhisper}
+        />
       )}
       {videos.length > 0 && <VideoTable videos={videos} />}
     </div>

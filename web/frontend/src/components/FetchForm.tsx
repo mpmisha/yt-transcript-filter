@@ -7,10 +7,10 @@ interface FetchFormProps {
 }
 
 export function FetchForm({ onSubmit, disabled }: FetchFormProps) {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState("https://www.youtube.com/@starterstory");
   const [whisperEnabled, setWhisperEnabled] = useState(false);
   const [whisperModel, setWhisperModel] = useState<WhisperModel>("base");
-  const [limit, setLimit] = useState<string>("5");
+  const [limit, setLimit] = useState<string>("1");
 
   const handleSubmit = () => {
     if (!url.trim()) return;

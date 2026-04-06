@@ -79,6 +79,9 @@ export function VideoProgressList({ items }: VideoProgressListProps) {
           <span className="video-progress-icon">{getStepIcon(item.step)}</span>
           <span className="video-progress-title">{item.title}</span>
           <span className="video-progress-step">{getStepLabel(item.step)}</span>
+          {item.error && (
+            <span className="video-progress-error">{item.error}</span>
+          )}
         </div>
       ))}
     </div>
