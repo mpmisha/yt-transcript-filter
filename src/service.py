@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import time
 from collections.abc import Generator
 
 from .fetcher import fetch_transcript, get_video_list
@@ -15,7 +16,6 @@ logger = logging.getLogger(__name__)
 def fetch_channel_transcripts(
     url: str,
     lang: str = "en",
-    whisper_model: str | None = None,
     limit: int | None = None,
 ) -> Generator[dict, None, None]:
     """Fetch transcripts for all videos in a channel/playlist, yielding progress.
@@ -23,7 +23,6 @@ def fetch_channel_transcripts(
     Args:
         url: YouTube channel or playlist URL.
         lang: Language code for YouTube captions.
-        whisper_model: Optional Whisper model name for fallback transcription.
         limit: Optional max number of videos to process. None means all.
 
     Yields ``video_list``, ``video_status``, ``progress``, and ``done`` dicts.
@@ -57,7 +56,6 @@ def fetch_channel_transcripts(
         ],
     }
 
-    with_whisper_count = 0
     for i, video in enumerate(videos):
         transcript_source: str | None = None
 
@@ -72,36 +70,8 @@ def fetch_channel_transcripts(
             transcript_source = "youtube"
         else:
             yield {"event": "video_status", "video_id": video.video_id, "step": "no_captions"}
-
-            if whisper_model is not None:
-                from .whisper_transcriber import download_audio, transcribe_audio, AUDIO_CACHE_DIR
-
-                yield {"event": "video_status", "video_id": video.video_id, "step": "downloading_audio"}
-                audio_path = None
-                try:
-                    audio_path = download_audio(video.video_id, AUDIO_CACHE_DIR)
-                    yield {"event": "video_status", "video_id": video.video_id, "step": "transcribing"}
-                    video.transcript = transcribe_audio(audio_path, whisper_model)
-                    transcript_source = "whisper"
-                    yield {"event": "video_status", "video_id": video.video_id, "step": "whisper_complete"}
-                except Exception as exc:
-                    logger.error("Whisper failed for %s: %s", video.video_id, exc, exc_info=True)
-                    video.transcript = None
-                    yield {
-                        "event": "video_status",
-                        "video_id": video.video_id,
-                        "step": "whisper_failed",
-                        "error": str(exc),
-                    }
-                finally:
-                    if audio_path is not None and audio_path.exists():
-                        audio_path.unlink()
-            else:
-                yield {"event": "video_status", "video_id": video.video_id, "step": "skipped"}
-                video.transcript = None
-
-        if transcript_source == "whisper":
-            with_whisper_count += 1
+            yield {"event": "video_status", "video_id": video.video_id, "step": "skipped"}
+            video.transcript = None
 
         yield {
             "event": "progress",
@@ -116,6 +86,9 @@ def fetch_channel_transcripts(
             "transcript_source": transcript_source,
         }
 
+        if i < total - 1:
+            time.sleep(1.5)
+
     if videos:
         save_transcripts(videos, "./transcripts")
 
@@ -123,6 +96,5 @@ def fetch_channel_transcripts(
         "event": "done",
         "total": total,
         "with_transcript": sum(1 for v in videos if v.transcript),
-        "with_whisper": with_whisper_count,
         "output_dir": "./transcripts",
     }

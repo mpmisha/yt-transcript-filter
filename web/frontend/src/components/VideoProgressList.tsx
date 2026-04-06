@@ -9,17 +9,11 @@ function getStepIcon(step: VideoStep): string {
     case "pending":
       return "⬜";
     case "checking_captions":
-    case "downloading_audio":
-    case "transcribing":
       return "⏳";
     case "captions_found":
       return "✅";
     case "no_captions":
       return "⚠️";
-    case "whisper_complete":
-      return "🎤";
-    case "whisper_failed":
-      return "❌";
     case "skipped":
       return "⏭️";
   }
@@ -35,14 +29,6 @@ function getStepLabel(step: VideoStep): string {
       return "YouTube captions";
     case "no_captions":
       return "No captions found";
-    case "downloading_audio":
-      return "Downloading audio…";
-    case "transcribing":
-      return "Transcribing…";
-    case "whisper_complete":
-      return "Whisper (complete)";
-    case "whisper_failed":
-      return "Whisper (failed)";
     case "skipped":
       return "Skipped";
   }
@@ -53,16 +39,11 @@ function getStepClass(step: VideoStep): string {
     case "pending":
       return "step-pending";
     case "checking_captions":
-    case "downloading_audio":
-    case "transcribing":
       return "step-active";
     case "captions_found":
-    case "whisper_complete":
       return "step-success";
     case "no_captions":
       return "step-warning";
-    case "whisper_failed":
-      return "step-error";
     case "skipped":
       return "step-skipped";
   }

@@ -8,7 +8,7 @@ import { useFetchTranscripts } from "./hooks/useFetchTranscripts";
 import "./App.css";
 
 function App() {
-  const { videos, videoProgress, progress, status, error, withTranscript, withWhisper, startFetch } =
+  const { videos, videoProgress, progress, status, error, withTranscript, startFetch } =
     useFetchTranscripts();
 
   return (
@@ -28,7 +28,6 @@ function App() {
         <SummaryCard
           total={progress.total}
           withTranscript={withTranscript}
-          withWhisper={withWhisper}
         />
       )}
       {videos.length > 0 && <VideoTable videos={videos} />}

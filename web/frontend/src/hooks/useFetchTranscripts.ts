@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { VideoInfo, VideoProgressItem, FetchProgress, FetchStatus, SSEEvent, WhisperModel } from "../types";
+import type { VideoInfo, VideoProgressItem, FetchProgress, FetchStatus, SSEEvent } from "../types";
 
 interface UseFetchResult {
   videos: VideoInfo[];
@@ -8,8 +8,7 @@ interface UseFetchResult {
   status: FetchStatus;
   error: string | null;
   withTranscript: number;
-  withWhisper: number;
-  startFetch: (url: string, lang: string, whisperModel?: WhisperModel | null, limit?: number | null) => void;
+  startFetch: (url: string, lang: string, limit?: number | null) => void;
 }
 
 export function useFetchTranscripts(): UseFetchResult {
@@ -18,16 +17,14 @@ export function useFetchTranscripts(): UseFetchResult {
   const [status, setStatus] = useState<FetchStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [withTranscript, setWithTranscript] = useState(0);
-  const [withWhisper, setWithWhisper] = useState(0);
   const [videoProgress, setVideoProgress] = useState<VideoProgressItem[]>([]);
 
-  const startFetch = useCallback(async (url: string, lang: string, whisperModel: WhisperModel | null = null, limit: number | null = null) => {
+  const startFetch = useCallback(async (url: string, lang: string, limit: number | null = null) => {
     setVideos([]);
     setProgress({ current: 0, total: 0 });
     setStatus("loading");
     setError(null);
     setWithTranscript(0);
-    setWithWhisper(0);
     setVideoProgress([]);
 
     try {
@@ -37,7 +34,6 @@ export function useFetchTranscripts(): UseFetchResult {
         body: JSON.stringify({
           url,
           lang,
-          whisper_model: whisperModel,
           ...(limit != null && { limit }),
         }),
       });
@@ -101,7 +97,6 @@ export function useFetchTranscripts(): UseFetchResult {
             setProgress({ current: data.current, total: data.total });
           } else if (data.event === "done") {
             setWithTranscript(data.with_transcript);
-            setWithWhisper(data.with_whisper);
             setStatus("done");
           } else if (data.event === "error") {
             setError(data.detail);
@@ -117,5 +112,5 @@ export function useFetchTranscripts(): UseFetchResult {
     }
   }, []);
 
-  return { videos, videoProgress, progress, status, error, withTranscript, withWhisper, startFetch };
+  return { videos, videoProgress, progress, status, error, withTranscript, startFetch };
 }

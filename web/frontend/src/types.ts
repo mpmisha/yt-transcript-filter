@@ -1,5 +1,3 @@
-export type WhisperModel = "tiny" | "base" | "small" | "medium";
-
 export interface VideoInfo {
   video_id: string;
   title: string;
@@ -7,7 +5,7 @@ export interface VideoInfo {
   duration: number | null;
   upload_date: string | null;
   has_transcript: boolean;
-  transcript_source: "youtube" | "whisper" | null;
+  transcript_source: "youtube" | null;
 }
 
 export interface FetchProgress {
@@ -27,14 +25,13 @@ export interface SSEProgressEvent {
   upload_date: string | null;
   url: string;
   has_transcript: boolean;
-  transcript_source: "youtube" | "whisper" | null;
+  transcript_source: "youtube" | null;
 }
 
 export interface SSEDoneEvent {
   event: "done";
   total: number;
   with_transcript: number;
-  with_whisper: number;
   output_dir: string;
 }
 
@@ -48,10 +45,6 @@ export type VideoStep =
   | "checking_captions"
   | "captions_found"
   | "no_captions"
-  | "downloading_audio"
-  | "transcribing"
-  | "whisper_complete"
-  | "whisper_failed"
   | "skipped";
 
 export interface SSEVideoListEvent {

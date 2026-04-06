@@ -29,4 +29,3 @@ web/frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
-.audio_cache/

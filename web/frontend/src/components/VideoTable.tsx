@@ -14,7 +14,6 @@ function formatDuration(seconds: number | null): string {
 function formatTranscriptSource(source: string | null, hasTranscript: boolean): string {
   if (!hasTranscript) return "❌ None";
   if (source === "youtube") return "✅ YouTube";
-  if (source === "whisper") return "✅ Whisper";
   return "✅";
 }
 

@@ -18,13 +18,9 @@ app.add_middleware(
 )
 
 
-VALID_WHISPER_MODELS = ("tiny", "base", "small", "medium")
-
-
 class FetchRequest(BaseModel):
     url: str
     lang: str = "en"
-    whisper_model: Optional[str] = None
     limit: Optional[int] = Field(default=None, ge=1)
 
 
@@ -38,16 +34,10 @@ async def fetch_transcripts(req: FetchRequest):
     if not req.url.strip():
         return JSONResponse(status_code=400, content={"detail": "URL is required"})
 
-    if req.whisper_model is not None and req.whisper_model not in VALID_WHISPER_MODELS:
-        return JSONResponse(
-            status_code=400,
-            content={"detail": f"Invalid whisper_model. Must be one of: {', '.join(VALID_WHISPER_MODELS)}"},
-        )
-
     def event_stream():
         try:
             from src.service import fetch_channel_transcripts
-            for event in fetch_channel_transcripts(req.url, req.lang, whisper_model=req.whisper_model, limit=req.limit):
+            for event in fetch_channel_transcripts(req.url, req.lang, limit=req.limit):
                 yield f"data: {json.dumps(event)}\n\n"
         except ValueError as e:
             yield f"data: {json.dumps({'event': 'error', 'detail': str(e)})}\n\n"

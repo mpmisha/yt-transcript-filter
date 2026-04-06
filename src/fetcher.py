@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
-from collections.abc import Callable
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import (
+    IpBlocked,
+    NoTranscriptFound,
+    RequestBlocked,
+    TranscriptsDisabled,
+    VideoUnavailable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,10 +76,17 @@ def fetch_transcript(video_id: str, languages: list[str] | None = None) -> str |
         languages = ["en"]
 
     try:
-        transcript_parts = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
-        return " ".join(part["text"] for part in transcript_parts)
-    except Exception as exc:
+        ytt_api = YouTubeTranscriptApi()
+        transcript = ytt_api.fetch(video_id, languages=languages)
+        return " ".join(snippet.text for snippet in transcript)
+    except (NoTranscriptFound, TranscriptsDisabled, VideoUnavailable) as exc:
         logger.debug("No transcript for %s: %s", video_id, exc)
+        return None
+    except (IpBlocked, RequestBlocked) as exc:
+        logger.warning("YouTube blocked request for %s: %s", video_id, type(exc).__name__)
+        return None
+    except Exception as exc:
+        logger.warning("Failed to fetch transcript for %s: %s", video_id, exc)
         return None
 
 
@@ -88,39 +103,7 @@ def fetch_all_transcripts(
         video.transcript = fetch_transcript(video.video_id, languages=languages)
         if progress_callback:
             progress_callback(i + 1, len(videos), video)
+        if i < len(videos) - 1:
+            time.sleep(1.5)
 
     return videos
-
-
-def fetch_transcript_with_fallback(
-    video_id: str,
-    languages: list[str] | None = None,
-    whisper_model: str | None = None,
-    status_callback: Callable[[str], None] | None = None,
-) -> tuple[str | None, str | None]:
-    """Fetch transcript with optional Whisper fallback.
-
-    Returns (transcript_text, source) where source is "youtube", "whisper", or None.
-    """
-    if status_callback:
-        status_callback("checking_captions")
-
-    text = fetch_transcript(video_id, languages)
-    if text is not None:
-        if status_callback:
-            status_callback("captions_found")
-        return text, "youtube"
-
-    if status_callback:
-        status_callback("no_captions")
-
-    if whisper_model is not None:
-        from .whisper_transcriber import whisper_transcript
-        result = whisper_transcript(video_id, whisper_model, status_callback=status_callback)
-        if result is not None:
-            return result, "whisper"
-
-    if status_callback:
-        status_callback("skipped")
-
-    return None, None
