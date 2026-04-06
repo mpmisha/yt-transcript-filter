@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
 from youtube_transcript_api import YouTubeTranscriptApi
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -67,7 +70,8 @@ def fetch_transcript(video_id: str, languages: list[str] | None = None) -> str |
     try:
         transcript_parts = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
         return " ".join(part["text"] for part in transcript_parts)
-    except Exception:
+    except Exception as exc:
+        logger.debug("No transcript for %s: %s", video_id, exc)
         return None
 
 
@@ -86,3 +90,37 @@ def fetch_all_transcripts(
             progress_callback(i + 1, len(videos), video)
 
     return videos
+
+
+def fetch_transcript_with_fallback(
+    video_id: str,
+    languages: list[str] | None = None,
+    whisper_model: str | None = None,
+    status_callback: Callable[[str], None] | None = None,
+) -> tuple[str | None, str | None]:
+    """Fetch transcript with optional Whisper fallback.
+
+    Returns (transcript_text, source) where source is "youtube", "whisper", or None.
+    """
+    if status_callback:
+        status_callback("checking_captions")
+
+    text = fetch_transcript(video_id, languages)
+    if text is not None:
+        if status_callback:
+            status_callback("captions_found")
+        return text, "youtube"
+
+    if status_callback:
+        status_callback("no_captions")
+
+    if whisper_model is not None:
+        from .whisper_transcriber import whisper_transcript
+        result = whisper_transcript(video_id, whisper_model, status_callback=status_callback)
+        if result is not None:
+            return result, "whisper"
+
+    if status_callback:
+        status_callback("skipped")
+
+    return None, None

@@ -20,6 +20,13 @@ env/
 transcripts/
 output/
 
+# Node
+node_modules/
+
+# Frontend
+web/frontend/dist/
+
 # OS
 .DS_Store
 Thumbs.db
+.audio_cache/

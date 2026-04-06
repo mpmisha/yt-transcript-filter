@@ -1,5 +1,7 @@
 """Command-line interface for yt-transcript-filter."""
 
+from __future__ import annotations
+
 import click
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
@@ -22,7 +24,8 @@ def cli():
 @click.argument("url")
 @click.option("--output", "-o", default="./transcripts", help="Output directory for transcripts.")
 @click.option("--lang", "-l", default="en", help="Transcript language (default: en).")
-def fetch(url: str, output: str, lang: str):
+@click.option("--limit", "-n", default=None, type=int, help="Max number of videos to fetch.")
+def fetch(url: str, output: str, lang: str, limit: int | None):
     """Fetch transcripts from a YouTube channel or playlist URL."""
     languages = [l.strip() for l in lang.split(",")]
 
@@ -31,7 +34,11 @@ def fetch(url: str, output: str, lang: str):
     with console.status("Getting video list..."):
         videos = get_video_list(url)
 
-    console.print(f"[green]Found {len(videos)} videos.[/]\n")
+    if limit is not None:
+        videos = videos[:limit]
+        console.print(f"[green]Found {len(videos)} videos (limited to {limit}).[/]\n")
+    else:
+        console.print(f"[green]Found {len(videos)} videos.[/]\n")
 
     with Progress(
         SpinnerColumn(),
