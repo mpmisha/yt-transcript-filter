@@ -16,6 +16,8 @@ function getStepIcon(step: VideoStep): string {
       return "⚠️";
     case "skipped":
       return "⏭️";
+    case "cached":
+      return "📦";
   }
 }
 
@@ -31,6 +33,8 @@ function getStepLabel(step: VideoStep): string {
       return "No captions found";
     case "skipped":
       return "Skipped";
+    case "cached":
+      return "Cached locally";
   }
 }
 
@@ -46,6 +50,8 @@ function getStepClass(step: VideoStep): string {
       return "step-warning";
     case "skipped":
       return "step-skipped";
+    case "cached":
+      return "step-success";
   }
 }
 

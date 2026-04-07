@@ -26,6 +26,10 @@ node_modules/
 # Frontend
 web/frontend/dist/
 
+# Environment
+.env
+
 # OS
 .DS_Store
 Thumbs.db
+todos.db

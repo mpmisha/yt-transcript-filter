@@ -16,9 +16,56 @@ def sanitize_filename(name: str) -> str:
     return name.strip()[:200]  # cap length
 
 
+def _format_duration(seconds: int | float | None) -> str:
+    """Format duration in seconds as M:SS."""
+    if seconds is None:
+        return "Unknown"
+    total = int(seconds)
+    m = total // 60
+    s = total % 60
+    return f"{m}:{s:02d}"
+
+
+def _format_upload_date(date_str: str | None) -> str:
+    """Format YYYYMMDD as YYYY-MM-DD."""
+    if not date_str:
+        return "Unknown"
+    if len(date_str) == 8:
+        return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+    return date_str
+
+
+def format_transcript_as_markdown(video: VideoInfo) -> str:
+    """Format a transcript as a Markdown document with title, metadata, and paragraphs.
+
+    Speaker changes marked by '>>' in the raw transcript are used as paragraph breaks.
+    """
+    lines = [
+        f"# {video.title}",
+        "",
+        f"**Video:** https://www.youtube.com/watch?v={video.video_id}",
+        f"**Video ID:** {video.video_id}",
+        f"**Upload Date:** {_format_upload_date(video.upload_date)}",
+        f"**Duration:** {_format_duration(video.duration)}",
+        "",
+        "---",
+        "",
+    ]
+
+    if video.transcript:
+        paragraphs = video.transcript.split(">>")
+        for paragraph in paragraphs:
+            text = paragraph.strip()
+            if text:
+                lines.append(text)
+                lines.append("")
+
+    return "\n".join(lines)
+
+
 def save_transcripts(videos: list[VideoInfo], output_dir: str | Path) -> Path:
     """
-    Save transcripts to a directory, one .txt file per video.
+    Save transcripts to a directory, one .md file per video.
     Also saves a metadata index as JSON.
     """
     output_dir = Path(output_dir)
@@ -28,13 +75,11 @@ def save_transcripts(videos: list[VideoInfo], output_dir: str | Path) -> Path:
 
     for video in videos:
         safe_name = sanitize_filename(video.title)
-        filename = f"{safe_name}__{video.video_id}.txt"
+        filename = f"{safe_name}__{video.video_id}.md"
         filepath = output_dir / filename
 
-        if video.transcript:
-            filepath.write_text(video.transcript, encoding="utf-8")
-        else:
-            filepath.write_text("[No transcript available]", encoding="utf-8")
+        content = format_transcript_as_markdown(video)
+        filepath.write_text(content, encoding="utf-8")
 
         index.append({
             "video_id": video.video_id,
@@ -64,3 +109,22 @@ def load_transcript(output_dir: str | Path, filename: str) -> str:
     """Load a single transcript file."""
     filepath = Path(output_dir) / filename
     return filepath.read_text(encoding="utf-8")
+
+
+def extract_transcript_body(output_dir: str | Path, filename: str) -> str | None:
+    """Extract transcript body from a saved markdown transcript file."""
+    filepath = Path(output_dir) / filename
+    if not filepath.exists():
+        return None
+
+    try:
+        text = filepath.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    parts = text.split("\n---\n", 1)
+    if len(parts) != 2:
+        return None
+
+    body = parts[1].strip()
+    return body if body else None

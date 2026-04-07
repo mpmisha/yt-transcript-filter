@@ -89,3 +89,133 @@ Added an optional video limit parameter so users can cap the number of videos pr
 Limit is applied as a simple list slice (`videos[:limit]`) after `get_video_list()` returns. Everything downstream (video_list event, processing loop, done event) naturally uses the sliced list. Pydantic `ge=1` constraint auto-rejects invalid values with HTTP 422.
 
 ---
+
+## Markdown Transcript Formatting
+**Date**: 2026-04-06
+**Plan**: `src/Plans/TranscriptFormatting/PLAN.md`
+
+### Summary
+Transcripts are now saved as formatted Markdown (`.md`) instead of raw text (`.txt`). Each file includes a title heading, video metadata block (URL, ID, upload date, duration), and paragraphs split on speaker-change markers (`>>`).
+
+### Changes
+- **Files modified**: `src/storage.py`
+- **Key additions**:
+  - `format_transcript_as_markdown()` — formats a `VideoInfo` into a structured Markdown document
+  - `_format_duration()` and `_format_upload_date()` private helper functions
+  - Transcript files now use `.md` extension instead of `.txt`
+  - `_index.json` references `.md` filenames
+  - Videos without transcripts get a metadata-only Markdown file (no `[No transcript available]` placeholder)
+
+### Technical Details
+The formatter is a pure function in `src/storage.py` — no new modules, no external dependencies. YouTube auto-generated captions include `>>` markers at speaker changes, which are used as natural paragraph break points. No retroactive conversion of existing `.txt` files. The `load_index()` and `load_transcript()` functions required no changes since they read filenames from `_index.json`.
+
+---
+
+## Transcript Viewer Modal
+**Date**: 2026-04-06
+**Plan**: `src/Plans/TranscriptViewer/PLAN.md`
+
+### Summary
+Added a "View" button in the video table that opens a modal overlay displaying the full formatted transcript. Transcripts are served via a new `GET /api/transcripts/{video_id}` API endpoint.
+
+### Changes
+- **Files created**: `web/frontend/src/components/TranscriptModal.tsx`
+- **Files modified**: `web/api.py`, `web/frontend/src/components/VideoTable.tsx`, `web/frontend/src/App.tsx`, `web/frontend/src/App.css`
+- **Key additions**:
+  - `GET /api/transcripts/{video_id}` endpoint using existing `load_index()` and `load_transcript()` from storage
+  - `TranscriptModal` component with fetch-on-mount, loading/error states, close via X/Escape/overlay click
+  - "View" button column in VideoTable (only shown for videos with transcripts)
+  - `selectedVideo` state in App.tsx to control modal visibility
+  - Modal and button CSS styles
+
+### Technical Details
+The API endpoint uses existing storage functions — no new backend code was needed. Transcript content is rendered as preformatted text (`<pre>` with `white-space: pre-wrap`) to preserve the Markdown formatting without parsing it as HTML, avoiding XSS risks. Three close mechanisms: X button, Escape key (via `keydown` listener), and overlay click (target === currentTarget check).
+
+---
+
+## Default Transcript View on Load
+**Date**: 2026-04-06
+**Plan**: `src/Plans/DefaultView/PLAN.md`
+
+### Summary
+Added automatic loading of existing transcripts when the app starts, so users immediately see saved results without running a new fetch.
+
+### Changes
+- **Files created**: None
+- **Files modified**: `web/api.py`, `web/frontend/src/hooks/useFetchTranscripts.ts`
+- **Key additions**:
+  - New `GET /api/transcripts` endpoint that returns index-backed video rows and counts
+  - `useFetchTranscripts` now calls `GET /api/transcripts` on mount
+  - Hook sets `status = "done"` when existing videos are found, enabling immediate table + summary rendering
+  - Empty/missing transcript index gracefully keeps the normal empty startup state
+
+### Technical Details
+`GET /api/transcripts` is defined before `GET /api/transcripts/{video_id}` to avoid FastAPI path matching conflicts. On the frontend, initial-load errors are silently ignored to preserve a resilient empty-state startup when no transcript data exists yet.
+
+---
+
+## Remove Whisper Fallback
+**Date**: 2026-04-06
+**Plan**: `src/Plans/RemoveWhisper/PLAN.md`
+
+### Summary
+Removed the entire Whisper-based fallback transcription system from all three layers (BE, API, FE). YouTube auto-generated captions cover virtually all videos, making the Whisper path unnecessary.
+
+### Changes
+- **Files deleted**: `src/whisper_transcriber.py`
+- **Files modified**: `src/fetcher.py`, `src/service.py`, `web/api.py`, `requirements.txt`, `.gitignore`, frontend types/components/hook/CSS
+- **Key removals**:
+  - `faster-whisper` dependency removed from `requirements.txt`
+  - `fetch_transcript_with_fallback()` removed from `src/fetcher.py`
+  - `whisper_model` parameter removed from service, API, and frontend
+  - Whisper toggle/model dropdown removed from FetchForm
+  - Whisper-related SSE steps removed (downloading_audio, transcribing, whisper_complete)
+  - `.audio_cache/` entry removed from `.gitignore`
+
+### Technical Details
+The Whisper path downloaded full audio streams via yt-dlp, which triggered aggressive YouTube rate-limiting (429 errors) after ~10-20 videos. The transcript API is much lighter and sufficient for the use case. Removing Whisper eliminated the `faster-whisper` dependency (~140MB+ model downloads) and simplified the codebase significantly (~57 Whisper references across 13 files).
+
+---
+
+## TopicFilter (LLM Topic Scoring)
+**Date**: 2026-04-07
+**Plan**: `src/Plans/TopicFilter/PLAN.md`
+
+### Summary
+Added a Gemini-powered topic filter that scores each transcript against a free-text topic and streams ranked relevance results to the web UI in real time.
+
+### Changes
+- **Files created**: `src/llm_filter.py`, `web/frontend/src/components/TopicFilterPanel.tsx`, `web/frontend/src/components/FilterResultsList.tsx`, `web/frontend/src/hooks/useTopicFilter.ts`
+- **Files modified**: `requirements.txt`, `web/api.py`, `web/frontend/src/types.ts`, `web/frontend/src/App.tsx`, `web/frontend/src/App.css`
+- **Key additions**:
+  - Gemini integration (`gemini-2.0-flash`) with `GEMINI_API_KEY` environment configuration
+  - SSE endpoint `POST /api/filter-by-topic` with `filter_start`, `filter_progress`, `filter_done`, and `filter_error` events
+  - Topic scoring cache persisted as `transcripts/_filter_cache.json` keyed by `(video_id, normalized_topic)`
+  - Topic filter panel (topic input + threshold slider) and ranked results list with AI explanations
+  - Frontend streaming hook (`useTopicFilter`) integrated into `App.tsx` with progress and error states
+
+### Technical Details
+`src/llm_filter.py` truncates transcript input (`MAX_TRANSCRIPT_CHARS = 12_000`), requests strict JSON output from Gemini, and validates/parses responses with fallback JSON extraction. To stay within free-tier limits, non-cached requests are rate-limited (`REQUEST_DELAY_SECONDS = 4.0`) and cache entries are saved incrementally after each scored video.
+
+---
+
+## Skip Already-Fetched Transcripts
+**Date**: 2026-04-07
+**Plan**: `src/Plans/SkipCached/PLAN.md`
+
+### Summary
+Re-fetching a channel now skips videos whose transcript body is already available locally. Only uncached videos (or previously no-transcript entries) trigger YouTube transcript API calls.
+
+### Changes
+- **Files modified**: `src/storage.py`, `src/service.py`, `web/frontend/src/types.ts`, `web/frontend/src/components/VideoProgressList.tsx`, `web/frontend/src/components/VideoTable.tsx`
+- **Key additions**:
+  - `extract_transcript_body()` in `src/storage.py` to read transcript content from saved Markdown files
+  - Cache-aware flow in `src/service.py` with `video_status: "cached"` and `transcript_source: "cached"`
+  - API-call pacing now applies only between real YouTube fetches (not cached reads)
+  - Post-save `_index.json` merge logic to preserve entries for videos outside the current batch
+  - Frontend support for cached state in progress steps and transcript source display (`📦 Cached`)
+
+### Technical Details
+Cache hit conditions require all of: indexed `video_id`, `has_transcript: true`, and non-empty extracted Markdown transcript body. If any condition fails, the video is fetched normally. Videos with `has_transcript: false` remain re-fetch candidates.
+
+---

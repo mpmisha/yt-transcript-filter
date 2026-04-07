@@ -2,6 +2,7 @@ import type { VideoInfo } from "../types";
 
 interface VideoTableProps {
   videos: VideoInfo[];
+  onViewTranscript: (videoId: string, title: string) => void;
 }
 
 function formatDuration(seconds: number | null): string {
@@ -14,6 +15,7 @@ function formatDuration(seconds: number | null): string {
 function formatTranscriptSource(source: string | null, hasTranscript: boolean): string {
   if (!hasTranscript) return "❌ None";
   if (source === "youtube") return "✅ YouTube";
+  if (source === "cached") return "📦 Cached";
   return "✅";
 }
 
@@ -25,7 +27,7 @@ function formatDate(dateStr: string | null): string {
   return dateStr;
 }
 
-export function VideoTable({ videos }: VideoTableProps) {
+export function VideoTable({ videos, onViewTranscript }: VideoTableProps) {
   return (
     <div className="video-table-wrapper">
       <table className="video-table">
@@ -36,6 +38,7 @@ export function VideoTable({ videos }: VideoTableProps) {
             <th>Duration</th>
             <th>Upload Date</th>
             <th>Transcript Source</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -50,6 +53,16 @@ export function VideoTable({ videos }: VideoTableProps) {
               <td>{formatDuration(video.duration)}</td>
               <td>{formatDate(video.upload_date)}</td>
               <td>{formatTranscriptSource(video.transcript_source, video.has_transcript)}</td>
+              <td>
+                {video.has_transcript && (
+                  <button
+                    className="view-transcript-btn"
+                    onClick={() => onViewTranscript(video.video_id, video.title)}
+                  >
+                    View
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

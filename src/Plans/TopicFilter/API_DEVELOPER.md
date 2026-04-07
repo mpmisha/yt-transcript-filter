@@ -1,3 +1,77 @@
+# API Developer — Topic Filter SSE Endpoint
+
+## Goal
+
+Add a `POST /api/filter-by-topic` SSE endpoint that accepts a topic string and streams Gemini-scored relevance results for all fetched transcripts.
+
+## Files
+
+| Action | File |
+|--------|------|
+| **Modify** | `web/api.py` |
+
+## Blocked By
+
+**BE Developer** — needs Task 1 complete so `filter_by_topic()` generator exists in `src/llm_filter.py`.
+
+## Delivers
+
+A new SSE endpoint that streams `filter_start`, `filter_progress`, `filter_done`, and `filter_error` events.
+
+---
+
+## Detailed Steps
+
+### 1. Add `FilterRequest` Pydantic model
+
+Add below the existing `FetchRequest` model:
+
+```python
+class FilterRequest(BaseModel):
+    topic: str
+    threshold: int = Field(default=5, ge=0, le=10)
+    output_dir: str = "./transcripts"
+```
+
+### 2. Add `POST /api/filter-by-topic` endpoint
+
+Add after the existing `/api/transcripts/{video_id}` endpoint:
+
+```python
+@app.post("/api/filter-by-topic")
+async def filter_by_topic_endpoint(req: FilterRequest):
+    if not req.topic.strip():
+        return JSONResponse(status_code=400, content={"detail": "Topic is required"})
+
+    def event_stream():
+        try:
+            from src.llm_filter import filter_by_topic
+            for event in filter_by_topic(req.output_dir, req.topic.strip(), threshold=req.threshold):
+                yield f"data: {json.dumps(event)}\n\n"
+        except ValueError as e:
+            yield f"data: {json.dumps({'event': 'filter_error', 'detail': str(e)})}\n\n"
+        except Exception:
+            logging.getLogger(__name__).exception("Unhandled error in filter-by-topic stream")
+            yield f"data: {json.dumps({'event': 'filter_error', 'detail': 'Internal server error'})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+```
+
+Key details:
+- Uses the same `StreamingResponse` + SSE pattern as the existing `fetch-transcripts` endpoint
+- Lazy-imports `filter_by_topic` from `src.llm_filter` (same pattern as existing `fetch_channel_transcripts` import)
+- `ValueError` is caught specifically — this is what `_configure_gemini()` raises when `GEMINI_API_KEY` is missing
+- The `filter_error` event name matches the SSE contract (not `error`)
+
+### 3. No other changes needed
+
+The existing CORS middleware and FastAPI setup already cover the new endpoint. No new imports are required at the module level.
+
+---
+
+## Expected Final State
+
+```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -54,40 +128,6 @@ async def fetch_transcripts(req: FetchRequest):
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
-@app.get("/api/transcripts")
-async def list_transcripts():
-    from src.storage import load_index
-
-    try:
-        index = load_index("./transcripts")
-    except FileNotFoundError:
-        return {"videos": [], "total": 0, "with_transcript": 0}
-
-    videos = [
-        {
-            "video_id": entry["video_id"],
-            "title": entry["title"],
-            "url": entry["url"],
-            "duration": entry.get("duration"),
-            "upload_date": entry.get("upload_date"),
-            "has_transcript": entry.get("has_transcript", False),
-            "transcript_source": entry.get(
-                "transcript_source",
-                "youtube" if entry.get("has_transcript") else None,
-            ),
-        }
-        for entry in index
-    ]
-
-    with_transcript = sum(1 for video in videos if video["has_transcript"])
-
-    return {
-        "videos": videos,
-        "total": len(videos),
-        "with_transcript": with_transcript,
-    }
-
-
 @app.get("/api/transcripts/{video_id}")
 async def get_transcript(video_id: str):
     from src.storage import load_index, load_transcript
@@ -121,7 +161,6 @@ async def filter_by_topic_endpoint(req: FilterRequest):
     def event_stream():
         try:
             from src.llm_filter import filter_by_topic
-
             for event in filter_by_topic(req.output_dir, req.topic.strip(), threshold=req.threshold):
                 yield f"data: {json.dumps(event)}\n\n"
         except ValueError as e:
@@ -131,3 +170,26 @@ async def filter_by_topic_endpoint(req: FilterRequest):
             yield f"data: {json.dumps({'event': 'filter_error', 'detail': 'Internal server error'})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+```
+
+---
+
+## Verification
+
+1. Start the API server: `uvicorn web.api:app --reload --port 8000`
+2. Test health: `curl http://localhost:8000/api/health`
+3. Test missing topic validation:
+   ```bash
+   curl -X POST http://localhost:8000/api/filter-by-topic \
+     -H "Content-Type: application/json" \
+     -d '{"topic": ""}'
+   ```
+   → should return 400 `{"detail": "Topic is required"}`
+4. Test with valid topic (requires `GEMINI_API_KEY` and existing transcripts):
+   ```bash
+   curl -N -X POST http://localhost:8000/api/filter-by-topic \
+     -H "Content-Type: application/json" \
+     -d '{"topic": "app monetization"}'
+   ```
+   → should stream SSE events
+5. `grep -c "filter" web/api.py` — should show the new endpoint code

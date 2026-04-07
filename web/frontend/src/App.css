@@ -264,3 +264,241 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* Transcript Modal */
+.transcript-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.transcript-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.transcript-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.transcript-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transcript-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #6b7280;
+}
+
+.transcript-modal-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.transcript-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.transcript-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.transcript-modal-error {
+  color: #dc2626;
+}
+
+/* View Transcript Button */
+.view-transcript-btn {
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.view-transcript-btn:hover {
+  background: #2563eb;
+}
+
+/* Topic Filter Panel */
+.topic-filter-panel {
+  background: #f0f4ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin: 1.5rem 0;
+}
+
+.topic-filter-panel h2 {
+  margin: 0 0 0.3rem 0;
+  font-size: 1.1rem;
+  color: #1a1a2e;
+}
+
+.topic-filter-hint {
+  margin: 0 0 0.8rem 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.topic-filter-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.topic-filter-form .topic-input {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.topic-filter-form button {
+  padding: 0.6rem 1.4rem;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.topic-filter-form button:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.topic-filter-form button:disabled {
+  background: #a0a0a0;
+  cursor: not-allowed;
+}
+
+.topic-threshold-row {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.topic-threshold-row label {
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+.topic-threshold-row input {
+  width: 100%;
+}
+
+/* Filter Results */
+.filter-results {
+  margin: 1.5rem 0;
+}
+
+.filter-results-summary {
+  background: #ede9fe;
+  border: 1px solid #c4b5fd;
+  color: #4c1d95;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.filter-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  transition: background 0.2s;
+}
+
+.filter-result-item:hover {
+  background: #f3f4f6;
+}
+
+.filter-result-item.score-high {
+  border-left: 4px solid #16a34a;
+}
+
+.filter-result-item.score-medium {
+  border-left: 4px solid #ca8a04;
+}
+
+.filter-result-item.score-low {
+  border-left: 4px solid #dc2626;
+}
+
+.filter-result-score {
+  font-size: 1.5rem;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: center;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+.filter-result-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-result-title {
+  color: #4361ee;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.filter-result-title:hover {
+  text-decoration: underline;
+}
+
+.filter-result-explanation {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.4;
+}

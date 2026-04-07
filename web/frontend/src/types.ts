@@ -5,7 +5,7 @@ export interface VideoInfo {
   duration: number | null;
   upload_date: string | null;
   has_transcript: boolean;
-  transcript_source: "youtube" | null;
+  transcript_source: "youtube" | "cached" | null;
 }
 
 export interface FetchProgress {
@@ -25,7 +25,7 @@ export interface SSEProgressEvent {
   upload_date: string | null;
   url: string;
   has_transcript: boolean;
-  transcript_source: "youtube" | null;
+  transcript_source: "youtube" | "cached" | null;
 }
 
 export interface SSEDoneEvent {
@@ -45,7 +45,8 @@ export type VideoStep =
   | "checking_captions"
   | "captions_found"
   | "no_captions"
-  | "skipped";
+  | "skipped"
+  | "cached";
 
 export interface SSEVideoListEvent {
   event: "video_list";
@@ -82,3 +83,50 @@ export type SSEEvent =
   | SSEProgressEvent
   | SSEDoneEvent
   | SSEErrorEvent;
+
+export interface FilterResult {
+  video_id: string;
+  title: string;
+  url: string;
+  relevance_score: number;
+  explanation: string;
+  relevant: boolean;
+}
+
+export interface SSEFilterStartEvent {
+  event: "filter_start";
+  total: number;
+  topic: string;
+}
+
+export interface SSEFilterProgressEvent {
+  event: "filter_progress";
+  current: number;
+  total: number;
+  video_id: string;
+  title: string;
+  url: string;
+  relevance_score: number;
+  explanation: string;
+  relevant: boolean;
+}
+
+export interface SSEFilterDoneEvent {
+  event: "filter_done";
+  total: number;
+  relevant_count: number;
+  topic: string;
+}
+
+export interface SSEFilterErrorEvent {
+  event: "filter_error";
+  detail: string;
+}
+
+export type SSEFilterEvent =
+  | SSEFilterStartEvent
+  | SSEFilterProgressEvent
+  | SSEFilterDoneEvent
+  | SSEFilterErrorEvent;
+
+export type FilterStatus = "idle" | "loading" | "done" | "error";

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { VideoInfo, VideoProgressItem, FetchProgress, FetchStatus, SSEEvent } from "../types";
 
 interface UseFetchResult {
@@ -110,6 +110,26 @@ export function useFetchTranscripts(): UseFetchResult {
       setError(err instanceof Error ? err.message : "Unknown error");
       setStatus("error");
     }
+  }, []);
+
+  useEffect(() => {
+    const loadExisting = async () => {
+      try {
+        const response = await fetch("/api/transcripts");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.videos.length === 0) return;
+
+        setVideos(data.videos);
+        setProgress({ current: data.total, total: data.total });
+        setWithTranscript(data.with_transcript);
+        setStatus("done");
+      } catch {
+        // Silently ignore — app starts with empty state
+      }
+    };
+
+    loadExisting();
   }, []);
 
   return { videos, videoProgress, progress, status, error, withTranscript, startFetch };
