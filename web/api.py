@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -6,6 +7,7 @@ from typing import Optional
 import json
 import logging
 
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="yt-transcript-filter API")

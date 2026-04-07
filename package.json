@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently --names API,FE --prefix-colors blue,green \"npm run dev:api\" \"npm run dev:fe\"",
-    "dev:api": "uvicorn web.api:app --reload --port 8000",
+    "dev:api": ".venv/bin/uvicorn web.api:app --reload --port 8000",
     "dev:fe": "cd web/frontend && npm run dev",
     "build": "cd web/frontend && npm run build",
     "install:fe": "cd web/frontend && npm install"
