@@ -9,7 +9,7 @@ import time
 from collections.abc import Generator
 from pathlib import Path
 
-from .fetcher import fetch_transcript, get_video_list
+from .fetcher import TranscriptThrottledError, fetch_transcript, get_video_list
 from .storage import extract_transcript_body, load_index, save_transcripts
 
 logger = logging.getLogger(__name__)
@@ -96,7 +96,30 @@ def fetch_channel_transcripts(
             # Step 1: Check YouTube captions
             yield {"event": "video_status", "video_id": video.video_id, "step": "checking_captions"}
 
-            text = fetch_transcript(video.video_id, languages=[lang])
+            try:
+                text = fetch_transcript(video.video_id, languages=[lang])
+            except TranscriptThrottledError:
+                yield {
+                    "event": "video_status",
+                    "video_id": video.video_id,
+                    "step": "skipped",
+                    "skip_reason": "throttled",
+                }
+                video.transcript = None
+                yield {
+                    "event": "progress",
+                    "current": i + 1,
+                    "total": total,
+                    "video_id": video.video_id,
+                    "title": video.title,
+                    "duration": video.duration,
+                    "upload_date": video.upload_date,
+                    "url": video.url,
+                    "has_transcript": False,
+                    "transcript_source": None,
+                }
+                last_was_api_call = True
+                break
 
             if text is not None:
                 yield {"event": "video_status", "video_id": video.video_id, "step": "captions_found"}
@@ -104,7 +127,12 @@ def fetch_channel_transcripts(
                 transcript_source = "youtube"
             else:
                 yield {"event": "video_status", "video_id": video.video_id, "step": "no_captions"}
-                yield {"event": "video_status", "video_id": video.video_id, "step": "skipped"}
+                yield {
+                    "event": "video_status",
+                    "video_id": video.video_id,
+                    "step": "skipped",
+                    "skip_reason": "no_captions",
+                }
                 video.transcript = None
 
             last_was_api_call = True

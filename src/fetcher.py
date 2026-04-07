@@ -22,6 +22,10 @@ from youtube_transcript_api._errors import (
 logger = logging.getLogger(__name__)
 
 
+class TranscriptThrottledError(Exception):
+    """Raised when YouTube blocks or rate-limits a transcript request."""
+
+
 @dataclass
 class VideoInfo:
     """Metadata for a single YouTube video."""
@@ -84,7 +88,9 @@ def fetch_transcript(video_id: str, languages: list[str] | None = None) -> str |
         return None
     except (IpBlocked, RequestBlocked) as exc:
         logger.warning("YouTube blocked request for %s: %s", video_id, type(exc).__name__)
-        return None
+        raise TranscriptThrottledError(
+            f"YouTube blocked request ({type(exc).__name__})"
+        ) from exc
     except Exception as exc:
         logger.warning("Failed to fetch transcript for %s: %s", video_id, exc)
         return None

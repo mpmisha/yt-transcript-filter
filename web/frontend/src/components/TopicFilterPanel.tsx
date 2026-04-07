@@ -7,7 +7,7 @@ interface TopicFilterPanelProps {
 }
 
 export function TopicFilterPanel({ onFilter, disabled }: TopicFilterPanelProps) {
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState("how to get your first 100 customers");
   const [threshold, setThreshold] = useState(5);
 
   const handleSubmit = () => {
