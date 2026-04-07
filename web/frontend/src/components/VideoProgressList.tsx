@@ -21,7 +21,7 @@ function getStepIcon(step: VideoStep): string {
   }
 }
 
-function getStepLabel(step: VideoStep, skipReason?: string): string {
+function getStepLabel(step: VideoStep): string {
   switch (step) {
     case "pending":
       return "Pending";
@@ -32,8 +32,6 @@ function getStepLabel(step: VideoStep, skipReason?: string): string {
     case "no_captions":
       return "No captions found";
     case "skipped":
-      if (skipReason === "throttled") return "Skipped: YouTube is throttling requests";
-      if (skipReason === "no_captions") return "Skipped: no captions available";
       return "Skipped";
     case "cached":
       return "Cached locally";
@@ -67,7 +65,7 @@ export function VideoProgressList({ items }: VideoProgressListProps) {
         >
           <span className="video-progress-icon">{getStepIcon(item.step)}</span>
           <span className="video-progress-title">{item.title}</span>
-          <span className="video-progress-step">{getStepLabel(item.step, item.skip_reason)}</span>
+          <span className="video-progress-step">{getStepLabel(item.step)}</span>
           {item.error && (
             <span className="video-progress-error">{item.error}</span>
           )}

@@ -65,7 +65,6 @@ export interface SSEVideoStatusEvent {
   video_id: string;
   step: VideoStep;
   error?: string;
-  skip_reason?: string;
 }
 
 export interface VideoProgressItem {
@@ -76,7 +75,6 @@ export interface VideoProgressItem {
   url: string;
   step: VideoStep;
   error?: string;
-  skip_reason?: string;
 }
 
 export type SSEEvent =

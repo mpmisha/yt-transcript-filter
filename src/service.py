@@ -9,7 +9,7 @@ import time
 from collections.abc import Generator
 from pathlib import Path
 
-from .fetcher import TranscriptThrottledError, fetch_transcript, get_video_list
+from .fetcher import fetch_transcript, get_video_list
 from .storage import extract_transcript_body, load_index, save_transcripts
 
 logger = logging.getLogger(__name__)
@@ -74,6 +74,7 @@ def fetch_channel_transcripts(
     }
 
     last_was_api_call = False
+    rate_limited = False
 
     for i, video in enumerate(videos):
         transcript_source: str | None = None
@@ -90,52 +91,41 @@ def fetch_channel_transcripts(
                 cached_entry = None
 
         if cached_entry is None:
-            if last_was_api_call:
-                time.sleep(1.5)
-
-            # Step 1: Check YouTube captions
-            yield {"event": "video_status", "video_id": video.video_id, "step": "checking_captions"}
-
-            try:
-                text = fetch_transcript(video.video_id, languages=[lang])
-            except TranscriptThrottledError:
+            if rate_limited:
                 yield {
                     "event": "video_status",
                     "video_id": video.video_id,
                     "step": "skipped",
-                    "skip_reason": "throttled",
+                    "error": "Skipped — YouTube rate limited a previous request",
                 }
                 video.transcript = None
-                yield {
-                    "event": "progress",
-                    "current": i + 1,
-                    "total": total,
-                    "video_id": video.video_id,
-                    "title": video.title,
-                    "duration": video.duration,
-                    "upload_date": video.upload_date,
-                    "url": video.url,
-                    "has_transcript": False,
-                    "transcript_source": None,
-                }
-                last_was_api_call = True
-                break
-
-            if text is not None:
-                yield {"event": "video_status", "video_id": video.video_id, "step": "captions_found"}
-                video.transcript = text
-                transcript_source = "youtube"
             else:
-                yield {"event": "video_status", "video_id": video.video_id, "step": "no_captions"}
-                yield {
-                    "event": "video_status",
-                    "video_id": video.video_id,
-                    "step": "skipped",
-                    "skip_reason": "no_captions",
-                }
-                video.transcript = None
+                if last_was_api_call:
+                    time.sleep(1.5)
 
-            last_was_api_call = True
+                # Step 1: Check YouTube captions
+                yield {"event": "video_status", "video_id": video.video_id, "step": "checking_captions"}
+
+                text, reason = fetch_transcript(video.video_id, languages=[lang])
+
+                if text is not None:
+                    yield {"event": "video_status", "video_id": video.video_id, "step": "captions_found"}
+                    video.transcript = text
+                    transcript_source = "youtube"
+                else:
+                    yield {"event": "video_status", "video_id": video.video_id, "step": "no_captions"}
+                    yield {
+                        "event": "video_status",
+                        "video_id": video.video_id,
+                        "step": "skipped",
+                        "error": reason,
+                    }
+                    video.transcript = None
+
+                    if reason and reason.startswith("YouTube rate limit"):
+                        rate_limited = True
+
+                last_was_api_call = True
 
         yield {
             "event": "progress",

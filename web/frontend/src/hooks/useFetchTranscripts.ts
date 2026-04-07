@@ -77,7 +77,7 @@ export function useFetchTranscripts(): UseFetchResult {
             setVideoProgress((prev) =>
               prev.map((item) =>
                 item.video_id === data.video_id
-                  ? { ...item, step: data.step, error: data.error, skip_reason: data.skip_reason }
+                  ? { ...item, step: data.step, error: data.error }
                   : item
               )
             );
